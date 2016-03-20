@@ -31,6 +31,7 @@ class CardDeck(object):
         return len(self.cards)
 
     def __repr__(self):
+        self.cards.sort()
         return ' '.join([CARD_SYMBOLS[i] for i in self.cards])
 
 
@@ -38,9 +39,6 @@ class PlayerCardDeck(CardDeck):
 
     def getClosestMatch(deck):
         pass
-
-    def __repr__(self):
-        return ' '.join([CARD_SYMBOLS[i] for i in self.cards])
 
 class Player(object):
     def __init__(self, name):
@@ -58,7 +56,6 @@ class Player(object):
             moveCards = move.split(" ")
 
         moveCards = [CARD_SYMBOLS.index(i) for i in moveCards]
-        print(moveCards)
 
         if(not self.playCards(moveCards)):
             print("Invalid move")
@@ -101,6 +98,7 @@ class Game(object):
 
         while(self.finished == False):
             self.playTurn()
+            print("")
 
         print("Game finished, will reset")
 
