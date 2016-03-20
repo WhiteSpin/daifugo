@@ -1,19 +1,6 @@
 from random import shuffle
 
-CARD_SYMBOLS = {
-        0: '2',
-        1: '3',
-        2: '4',
-        3: '5',
-        4: '6',
-        5: '7',
-        6: '8',
-        7: '9',
-        8: '10',
-        9: 'B',
-        10: 'D',
-        11: 'K',
-        12: 'A'}
+CARD_SYMBOLS = ['2','3','4','5','6','7','8','9','10','B','D','K','A']
 
 class CardDeck(object):
     def __init__(self, standart=True):
@@ -43,24 +30,48 @@ class CardDeck(object):
     def size(self):
         return len(self.cards)
 
+    def __repr__(self):
+        return ' '.join([CARD_SYMBOLS[i] for i in self.cards])
+
 
 class PlayerCardDeck(CardDeck):
 
     def getClosestMatch(deck):
         pass
 
+    def __repr__(self):
+        return ' '.join([CARD_SYMBOLS[i] for i in self.cards])
+
 class Player(object):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.deck = PlayerCardDeck()
         self.game = None
 
+    def makeMove(self):
+        print("turn: " + self.name + " current cards: " + str(self.game.currentCards))
+        print("deck: " + str(self.deck))
+        move = raw_input("")
+        if move == "":
+            return False
+        else:
+            moveCards = move.split(" ")
+
+        moveCards = [CARD_SYMBOLS.index(i) for i in moveCards]
+        print(moveCards)
+
+        if(not self.playCards(moveCards)):
+            print("Invalid move")
+            self.makeMove()
+
+
     def playCards(self, cards):
         if(self.game.isValidMove(cards)):
-            self.game.currentCards.giveCardsTo(self.game.garbage, self.game.currentCards.cards)
+            self.game.flushCurrent()
             self.deck.giveCardsTo(self.game.currentCards, cards)
+            return True
 
-        else:
-            print("Move not valid")
+        return False
 
 class Game(object):
     def __init__(self, players):
@@ -68,21 +79,58 @@ class Game(object):
         for p in self.players:
             p.game = self
 
-        self.deck = CardDeck();
-        self.currentCards = CardDeck();
-        self.garbage = CardDeck();
+        self.reset()
 
-        self.deck.generateDeck();
+
+    def reset(self):
+        self.deck = CardDeck();
+        self.currentCards = CardDeck()
+        self.garbage = CardDeck()
+
+        self.deck.generateDeck()
+        self.turn = 0
+        self.lastPlayer = None
+        self.finished = False
+
+    def flushCurrent(self):
+        self.currentCards.giveCardsTo(self.garbage, self.currentCards.cards)
 
     def startGame(self):
         self.deck.shuffle()
         self.giveOutCards()
+
+        while(self.finished == False):
+            self.playTurn()
+
+        print("Game finished, will reset")
+
+
+    def playTurn(self):
+        p = self.players[self.turn] 
+        if(self.lastPlayer == p):
+            self.flushCurrent()
+        if(p.makeMove()):
+            lastPlayer = p
+
+        if(len(self.currentCards.cards) > 0 and self.currentCards.cards[0] == 12):
+            self.flushCurrent()
+            return
+
+        self.nextTurn()
+        
+
+    def nextTurn(self):
+        if(len(self.players) == self.turn + 1):
+            self.turn = 0
+        else:
+            self.turn += 1
 
     def isValidMove(self, cards):
         if (len(self.currentCards.cards) != len(cards) and len(self.currentCards.cards) > 0) or not allSame(cards):
             return False
 
         if len(self.currentCards.cards) == 0 or cards[0] > self.currentCards.cards[0]:
+            print("is valid")
             return True
 
         return False
@@ -95,7 +143,8 @@ class Game(object):
 def allSame(cards):
     return all(x == cards[0] for x in cards)
 
-a = Player()
-b = Player()
-c = Player()
+a = Player("A")
+b = Player("B")
+c = Player("C")
 g = Game([a,b,c])
+g.startGame()
