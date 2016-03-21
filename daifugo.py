@@ -1,4 +1,5 @@
 from random import shuffle
+import copy
 
 CARD_SYMBOLS = ['2','3','4','5','6','7','8','9','10','B','D','K','A']
 
@@ -8,7 +9,7 @@ class CardDeck(object):
         self.cards = []
 
     def generateDeck(self):
-        for j in (range(0,13) if self.standart else range(7,13)):
+        for j in (range(0,4) if self.standart else range(7,13)):
             for i in range(4):
                 self.cards.append(j)
         
@@ -23,12 +24,17 @@ class CardDeck(object):
         for i in cards:
             self.cards.remove(i)
 
+
     def giveCardsTo(self, deck, cards):
+        cards = copy.deepcopy(cards)
         deck.addCards(cards)
         self.removeCards(cards)
 
     def size(self):
         return len(self.cards)
+
+    def isEmpty(self):
+        return self.size() == 0
 
     def __repr__(self):
         self.cards.sort()
@@ -45,6 +51,7 @@ class Player(object):
         self.name = name
         self.deck = PlayerCardDeck()
         self.game = None
+        self.isDone = False
 
     def makeMove(self):
         print("turn: " + self.name + " current cards: " + str(self.game.currentCards))
@@ -59,13 +66,18 @@ class Player(object):
 
         if(not self.playCards(moveCards)):
             print("Invalid move")
-            self.makeMove()
+            return self.makeMove()
+
+        return True
 
 
     def playCards(self, cards):
         if(self.game.isValidMove(cards)):
             self.game.flushCurrent()
             self.deck.giveCardsTo(self.game.currentCards, cards)
+            if self.deck.isEmpty():
+                self.isDone = True
+                print("Player " + self.name + "is Done")
             return True
 
         return False
@@ -87,7 +99,11 @@ class Game(object):
         self.deck.generateDeck()
         self.turn = 0
         self.lastPlayer = None
+        self.previousPlayer = None
         self.finished = False
+
+        for p in self.players:
+            p.isDone = False
 
     def flushCurrent(self):
         self.currentCards.giveCardsTo(self.garbage, self.currentCards.cards)
@@ -104,24 +120,47 @@ class Game(object):
 
 
     def playTurn(self):
-        p = self.players[self.turn] 
-        if(self.lastPlayer == p):
+        p = self.nextPlayer()
+        if(self.lastPlayer):
+            print("Last player: " + self.lastPlayer.name)
+        if(self.lastPlayer == p or 
+            (self.players[self.previosTurn()] == self.lastPlayer and self.lastPlayer != self.previousPlayer)):
             self.flushCurrent()
         if(p.makeMove()):
-            lastPlayer = p
+            self.lastPlayer = p
 
         if(len(self.currentCards.cards) > 0 and self.currentCards.cards[0] == 12):
             self.flushCurrent()
             return
 
-        self.nextTurn()
+        self.previousPlayer = p
         
 
-    def nextTurn(self):
+    def nextPlayer(self):
         if(len(self.players) == self.turn + 1):
             self.turn = 0
         else:
             self.turn += 1
+
+        if self.players[self.turn].isDone: 
+            if self.allDone():
+                self.finished = True
+            else:
+                self.nextPlayer()
+        return self.players[self.turn]
+
+    def previosTurn(self):
+        turn = self.turn
+        if(turn == 0):
+            return len(self.players) - 1
+        else:
+            return turn - 1
+
+    def allDone(self):
+        for p in self.players:
+            if not p.isDone:
+                return False
+        return True
 
     def isValidMove(self, cards):
         if (len(self.currentCards.cards) != len(cards) and len(self.currentCards.cards) > 0) or not allSame(cards):
