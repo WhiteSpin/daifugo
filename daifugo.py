@@ -9,7 +9,7 @@ class CardDeck(object):
         self.cards = []
 
     def generateDeck(self):
-        for j in (range(0,4) if self.standart else range(7,13)):
+        for j in (range(0,2) if self.standart else range(7,13)):
             for i in range(4):
                 self.cards.append(j)
         
@@ -51,7 +51,7 @@ class Player(object):
         self.name = name
         self.deck = PlayerCardDeck()
         self.game = None
-        self.isDone = False
+        self.rank = 0
 
     def makeMove(self):
         print("turn: " + self.name + " current cards: " + str(self.game.currentCards))
@@ -70,14 +70,16 @@ class Player(object):
 
         return True
 
+    def isDone(self):
+        return self.rank != 0
+
 
     def playCards(self, cards):
         if(self.game.isValidMove(cards)):
             self.game.flushCurrent()
             self.deck.giveCardsTo(self.game.currentCards, cards)
             if self.deck.isEmpty():
-                self.isDone = True
-                print("Player " + self.name + "is Done")
+                self.game.playerFinished(self)
             return True
 
         return False
@@ -103,7 +105,7 @@ class Game(object):
         self.finished = False
 
         for p in self.players:
-            p.isDone = False
+            p.rank = 0
 
     def flushCurrent(self):
         self.currentCards.giveCardsTo(self.garbage, self.currentCards.cards)
@@ -118,14 +120,26 @@ class Game(object):
 
         print("Game finished, will reset")
 
+    def playerFinished(self, player):
+        player.rank = max([p.rank for p in self.players]) + 1
+        print("Player: " + player.name + " has finished with rank: " + str(player.rank))
+        if self.allDone():
+            self.finished = True
+        
 
     def playTurn(self):
         p = self.nextPlayer()
+
+        if self.finished:
+            return
+
         if(self.lastPlayer):
             print("Last player: " + self.lastPlayer.name)
+
         if(self.lastPlayer == p or 
             (self.players[self.previosTurn()] == self.lastPlayer and self.lastPlayer != self.previousPlayer)):
             self.flushCurrent()
+
         if(p.makeMove()):
             self.lastPlayer = p
 
@@ -142,11 +156,15 @@ class Game(object):
         else:
             self.turn += 1
 
-        if self.players[self.turn].isDone: 
+        if self.players[self.turn] == self.previousPlayer:
+            self.playerFinished(self.players[self.turn])
+
+        if self.players[self.turn].isDone(): 
             if self.allDone():
                 self.finished = True
             else:
                 self.nextPlayer()
+
         return self.players[self.turn]
 
     def previosTurn(self):
@@ -158,8 +176,9 @@ class Game(object):
 
     def allDone(self):
         for p in self.players:
-            if not p.isDone:
+            if not p.isDone():
                 return False
+
         return True
 
     def isValidMove(self, cards):
