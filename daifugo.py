@@ -4,12 +4,13 @@ import copy
 CARD_SYMBOLS = ['2','3','4','5','6','7','8','9','10','B','D','K','A']
 
 class CardDeck(object):
-    def __init__(self, standart=True):
-        self.standart = standart
+    def __init__(self, minVal, maxVal):
+        self.minVal = minVal
+        self.maxVal = maxVal
         self.cards = []
 
     def generateDeck(self):
-        for j in (range(0,2) if self.standart else range(7,13)):
+        for j in range(minVal, maxVal+1):
             for i in range(4):
                 self.cards.append(j)
         
@@ -42,16 +43,37 @@ class CardDeck(object):
 
 
 class PlayerCardDeck(CardDeck):
+    def __init__(self, minVal, maxVal):
+        super().__init__(minVal, maxVal)
+        self.game = None
 
-    def getClosestMatch(deck):
-        pass
+    def getClosestMatch(self):
+        cur = self.game.currentCards.cards
+        if cur != []:
+            curVal = cur[0]
+        else:
+            curVal = self.game.minVal
+        while(curVal < self.game.maxVal):
+            if(cur.count(curVal) >= len(cur)):
+                return ([curVal for i in range(len(cur))])
+        return None
 
 class Player(object):
     def __init__(self, name):
         self.name = name
         self.deck = PlayerCardDeck()
+        """
+        Restructoring necessary:
+            min/maxVal needs to be known by: CardDeck, Player, Game
+            should not be passed on post initialization
+            maybe global configuration?
+        """
         self.game = None
         self.rank = 0
+
+    def setGame(self, game):
+        self.game = game
+        self.deck.game = game
 
     def makeMove(self):
         print("turn: " + self.name + " current cards: " + str(self.game.currentCards))
@@ -73,7 +95,6 @@ class Player(object):
     def isDone(self):
         return self.rank != 0
 
-
     def playCards(self, cards):
         if(self.game.isValidMove(cards)):
             self.game.flushCurrent()
@@ -84,11 +105,25 @@ class Player(object):
 
         return False
 
+class computerPlayer(Player):
+    def makeMove(self):
+        print("turn: " + self.name + " current cards: " + str(self.game.currentCards))
+        print("deck: " + str(self.deck))
+        closestMatch = self.deck.getClosestMatch()
+        if(not closestMatch):
+            return False
+        
+        self.playCards(closestMatch)
+        return True
+
+
 class Game(object):
-    def __init__(self, players):
+    def __init__(self, players, minVal, maxVal):
+        self.minVal = minVal
+        self.maxVal = maxVal
         self.players = players
         for p in self.players:
-            p.game = self
+            p.setGame(self)
 
         self.reset()
 
@@ -143,7 +178,7 @@ class Game(object):
         if(p.makeMove()):
             self.lastPlayer = p
 
-        if(len(self.currentCards.cards) > 0 and self.currentCards.cards[0] == 12):
+        if(len(self.currentCards.cards) > 0 and self.currentCards.cards[0] == self.maxVal):
             self.flushCurrent()
             return
 
@@ -200,7 +235,6 @@ def allSame(cards):
     return all(x == cards[0] for x in cards)
 
 a = Player("A")
-b = Player("B")
-c = Player("C")
-g = Game([a,b,c])
+b = computerPlayer("B")
+g = Game([a,b],0, 5)
 g.startGame()
